@@ -3,7 +3,7 @@
 
 package wb_itf;
   
-  localparam ADDR_WIDTH = 8;
+  localparam ADDR_WIDTH = 11;
   localparam DATA_WIDTH = 32;
   localparam SEL_WIDTH = DATA_WIDTH / 8;
 

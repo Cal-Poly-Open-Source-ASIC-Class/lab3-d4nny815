@@ -2,6 +2,8 @@
 `define WB_RAM
 
 `include "wb_itf.sv"
+`include "DFFRAM256x32.v"
+
 import wb_itf::*;
 
 module wb_ram (
@@ -36,6 +38,22 @@ module wb_ram (
   // * CONTROL PATH
   // * =======================================================================
 
+  always_comb begin
+    case (PS)
+      IDLE_A: begin
+      end
+
+      IDLE_B: begin
+      end
+
+      PORT_A: begin
+      end
+
+      PORT_B: begin
+      end
+    endcase
+  end
+
 
   // * =======================================================================
   // * DATA PATH
@@ -58,6 +76,14 @@ module wb_ram (
     .Do0      (),
     .A0       ()
   );
+
+  assign pA_wb_o.stall = 0;
+  assign pA_wb_o.ack = 0;
+  assign pA_wb_o.data = 0;
+  
+  assign pB_wb_o.stall = 0;
+  assign pB_wb_o.ack = 0;
+  assign pB_wb_o.data = 0;
 
 
 

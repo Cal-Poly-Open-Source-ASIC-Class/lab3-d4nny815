@@ -18,7 +18,8 @@
  *
  */
 
-
+`ifndef DFFRAM256x32
+`define DFFRAM256x32
 // `timescale 1ns/1ps
 
 `default_nettype        none
@@ -54,3 +55,5 @@ module DFFRAM256x32  (
            else
                Do0 <= 32'b0;
     endmodule
+
+`endif

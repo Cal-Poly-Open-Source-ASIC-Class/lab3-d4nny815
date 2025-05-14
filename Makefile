@@ -1,5 +1,9 @@
 INC_DIR := ./include
 
+
+# ALL_RTL := $(shell find rtl -type f \( -name '*.sv' -o -name '*.v' \))
+# EXCLUDE_RTL := $(shell find rtl/common -type f \( -name '*.sv' -o -name '*.v' \))
+# RTL_SRCS := $(filter-out $(EXCLUDE_RTL), $(ALL_RTL))
 RTL_SRCS 	:= $(shell find rtl -name '*.sv' -or -name '*.v')
 TB_SRCS 	:= $(shell find tests -name '*.sv' -or -name '*.v')
 
@@ -16,19 +20,23 @@ TESTS = $(TEST_SUBDIRS:/=)
 
 # Main Linter and Simulatior is Verilator
 LINTER := verilator
+LINT_OPTS += --lint-only --timing $(LINT_INCLUDES)
+
 SIMULATOR := verilator
 SIMULATOR_ARGS := --binary --timing --trace --trace-structs \
 	--assert --timescale 1ns --quiet  
 SIMULATOR_BINARY := ./obj_dir/V*
 SIMULATOR_SRCS := *.sv
+
 # Optional use of Icarus as Linter and Simulator
 ifdef ICARUS
+LINTER    := iverilog
+LINT_OPTS := -Wall -g2012 
 SIMULATOR := iverilog
 SIMULATOR_ARGS := -g2012
 SIMULATOR_BINARY := a.out
-SIMULATOR_SRCS := $(foreach src, $(RTL_SRCS), $(realpath $(src))) *.sv
+SIMULATOR_SRCS := $(foreach src, $(RTL_SRCS) $(IP_SRCS) $(TB_SRCS), $(realpath $(src))) *.sv
 SIM_TOP := `$(shell pwd)/scripts/top.sh -s`
-# LINT_INCLUDES := ""
 endif
 # Gate Level Verification
 ifdef GL
@@ -36,10 +44,9 @@ SIMULATOR := iverilog
 LINT_INCLUDES := -I$(PDKPATH) -I$(realpath gl)
 SIMULATOR_ARGS := -g2012 -DFUNCTIONAL -DUSE_POWER_PINS 
 SIMULATOR_BINARY := a.out
-SIMULATOR_SRCS = $(realpath gl)/*  *.sv
+SIMULATOR_SRCS = $(realpath gl)/* *.sv
 endif
 
-LINT_OPTS += --lint-only --timing $(LINT_INCLUDES)
 
 # Text formatting for tests
 BOLD = `tput bold`
@@ -56,8 +63,63 @@ TEST_RESET := $(shell tput sgr0)
 all: lint_all tests
 
 lint: lint_all
-
 .PHONY: lint_all
+
+ifdef ICARUS
+lint_all:
+	@printf "\n$(GREEN)$(BOLD) ----- Linting RTL Modules ----- $(RESET)\n"
+	@for src in $(RTL_SRCS); do \
+	  if grep -qE '^[[:space:]]*package' $$src; then \
+	    printf "  [pkg]  $$src ... "; \
+	    if iverilog $(LINT_OPTS) $(LINT_INCLUDES) $$src > /dev/null 2>&1; then \
+	      printf "$(GREEN)PASSED$(RESET)\n"; \
+	    else \
+	      printf "\n"; \
+	    fi; \
+	    continue; \
+	  fi; \
+	  # otherwise grab the first `module NAME` \
+	  mod=$$(grep -m1 -oE '^[[:space:]]*module[[:space:]]+([[:alnum:]_]+)' $$src \
+	          | awk '{print $$2}'); \
+	  if [ -z "$$mod" ]; then \
+	    printf "  [!?] $$src (no module found!) ... "; \
+	    iverilog $(LINT_OPTS) $(LINT_INCLUDES) $$src > /dev/null 2>&1 && \
+	      printf "$(GREEN)PASSED$(RESET)\n" || \
+	      { printf "$(RED)FAILED$(RESET)\n"; iverilog $(LINT_OPTS) $(LINT_INCLUDES) $$src; }; \
+	    continue; \
+	  fi; \
+	  printf "  [mod] $$src (top=$$mod) ... "; \
+	  if iverilog $(LINT_OPTS) $(LINT_INCLUDES) -s $$mod $$src > /dev/null 2>&1; then \
+	    printf "$(GREEN)PASSED$(RESET)\n"; \
+	  else \
+	    printf "$(RED)FAILED$(RESET)\n"; \
+	    iverilog $(LINT_OPTS) $(LINT_INCLUDES) -s $$mod $$src; \
+	  fi; \
+	done
+
+	@printf "\n$(GREEN)$(BOLD) ----- Linting TB Modules ----- $(RESET)\n"
+	@for src in $(TB_SRCS); do \
+	  if grep -qE '^[[:space:]]*package' $$src; then \
+	    printf "  [pkg]  $$src ... "; \
+	    if iverilog $(LINT_OPTS) $(LINT_INCLUDES) $$src > /dev/null 2>&1; then \
+	      printf "$(GREEN)PASSED$(RESET)\n"; \
+	    else \
+	      printf "$(RED)FAILED$(RESET)\n"; \
+	      iverilog $(LINT_OPTS) $(LINT_INCLUDES) $$src; \
+	    fi; \
+	    continue; \
+	  fi; \
+	  mod=$$(grep -m1 -oE '^[[:space:]]*module[[:space:]]+([[:alnum:]_]+)' $$src \
+	          | awk '{print $$2}'); \
+	  printf "  [mod] $$src (top=$$mod) ... "; \
+	  if iverilog $(LINT_OPTS) $(LINT_INCLUDES) -s $$mod $$src > /dev/null 2>&1; then \
+	    printf "$(GREEN)PASSED$(RESET)\n"; \
+	  else \
+	    printf "$(RED)FAILED$(RESET)\n"; \
+	    iverilog $(LINT_OPTS) $(LINT_INCLUDES) -s $$mod $$src; \
+	  fi; \
+	done
+else
 lint_all: 
 	@printf "\n$(GREEN)$(BOLD) ----- Linting RTL Modules ----- $(RESET)\n"
 	@for src in $(RTL_SRCS); do \
@@ -85,6 +147,7 @@ lint_all:
 		fi; \
 	done
 
+endif
 
 .PHONY: lint_top
 lint_top:
@@ -101,11 +164,12 @@ tests/%: FORCE
 itests: 
 	@ICARUS=1 make tests
 
-RECENT=$(shell ls runs | tail -n 1)
-GL_NAME =$(shell ls runs/$(RECENT)/final/pnl/)
 gl_tests:
 	@mkdir -p gl
-	@cat scripts/gatelevel.vh runs/$(RECENT)/final/pnl/$(GL_NAME) > gl/$(GL_NAME)
+	@cp runs/recent/final/pnl/* gl/
+	@cat scripts/gatelevel.vh gl/*.v > gl/temp
+	@mv -f gl/temp gl/*.v
+	@rm -f gl/temp
 	@GL=1 make tests
 
 .PHONY: $(TESTS)
