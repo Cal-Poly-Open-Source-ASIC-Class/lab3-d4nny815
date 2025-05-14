@@ -1,11 +1,14 @@
 INC_DIR := ./include
 
 RTL_SRCS 	:= $(shell find rtl -name '*.sv' -or -name '*.v')
+TB_SRCS 	:= $(shell find tests -name '*.sv' -or -name '*.v')
 
 INCLUDE_DIRS := $(sort $(dir $(shell find . -name '*.svh')))
 RTL_DIRS	 := $(sort $(dir $(RTL_SRCS)))
+TB_DIRS			:= $(sort $(dir $(TB_SRCS)))
 # Include both Include and RTL directories for linting
-LINT_INCLUDES := $(foreach dir, $(INCLUDE_DIRS) $(RTL_DIRS), -I$(realpath $(dir))) -I$(PDKPATH) 
+ALL_INC_DIRS := $(INCLUDE_DIRS) $(RTL_DIRS) $(IP_DIRS) $(TB_DIRS)
+LINT_INCLUDES := $(foreach dir, $(ALL_INC_DIRS), -I$(realpath $(dir))) -I$(PDKPATH) 
 
 TEST_DIR = ./tests
 TEST_SUBDIRS = $(shell cd $(TEST_DIR) && ls -d */ | grep -v "__pycache__" )
@@ -56,8 +59,21 @@ lint: lint_all
 
 .PHONY: lint_all
 lint_all: 
-	@printf "\n$(GREEN)$(BOLD) ----- Linting All Modules ----- $(RESET)\n"
+	@printf "\n$(GREEN)$(BOLD) ----- Linting RTL Modules ----- $(RESET)\n"
 	@for src in $(RTL_SRCS); do \
+		top_module=$$(basename $$src .sv); \
+		top_module=$$(basename $$top_module .v); \
+		printf "Linting $$src . . . "; \
+		# printf "\n\t\t$(LINTER) $(LINT_OPTS)"; \
+		if $(LINTER) $(LINT_OPTS) --top-module $$top_module $$src > /dev/null 2>&1; then \
+			printf "$(GREEN)PASSED$(RESET)\n"; \
+		else \
+			printf "$(RED)FAILED$(RESET)\n"; \
+			$(LINTER) $(LINT_OPTS) --top-module $$top_module $$src; \
+		fi; \
+	done
+	@printf "\n$(GREEN)$(BOLD) ----- Linting TB Modules ----- $(RESET)\n"
+	@for src in $(TB_SRCS); do \
 		top_module=$$(basename $$src .sv); \
 		top_module=$$(basename $$top_module .v); \
 		printf "Linting $$src . . . "; \
@@ -68,6 +84,7 @@ lint_all:
 			$(LINTER) $(LINT_OPTS) --top-module $$top_module $$src; \
 		fi; \
 	done
+
 
 .PHONY: lint_top
 lint_top:
