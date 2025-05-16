@@ -221,6 +221,7 @@ clean:
 	rm -f `find tests -iname "a.out"`
 	rm -f `find tests -iname "*.log"`
 	rm -rf `find tests -iname "obj_dir"`
+	rm -rf runs
 
 .PHONY: VERILOG_SOURCES
 VERILOG_SOURCES: 

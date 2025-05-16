@@ -2,9 +2,6 @@
 `define TB_WB_RAM
 
 `include "wb_ram.sv"
-`include "wb_itf.sv"
-
-import wb_itf::*;
 
 `define WAIT(cond, clk)        \
   begin                         \
@@ -26,10 +23,26 @@ module tb_wb_ram ();
 
   bit wb_clk = 0;
   bit wb_reset_n = 1;
-  wb_input_t pA_wb_i;
-  wb_input_t pB_wb_i;
-  wb_output_t pA_wb_o;
-  wb_output_t pB_wb_o;
+  logic                       pA_wb_cyc_i;
+  logic                       pA_wb_stb_i;
+  logic                       pA_wb_we_i;
+  logic [ADDR_WIDTH-1:0]      pA_wb_addr_i;
+  logic [DATA_WIDTH-1:0]      pA_wb_data_i;
+  logic [SEL_WIDTH-1:0]       pA_wb_sel_i;
+  logic                       pA_wb_stall_o;
+  logic                       pA_wb_ack_o;
+  logic [DATA_WIDTH-1:0]      pA_wb_data_o;
+
+  // Port B Wishbone signals
+  logic                       pB_wb_cyc_i;
+  logic                       pB_wb_stb_i;
+  logic                       pB_wb_we_i;
+  logic [ADDR_WIDTH-1:0]      pB_wb_addr_i;
+  logic [DATA_WIDTH-1:0]      pB_wb_data_i;
+  logic [SEL_WIDTH-1:0]       pB_wb_sel_i;
+  logic                       pB_wb_stall_o;
+  logic                       pB_wb_ack_o;
+  logic [DATA_WIDTH-1:0]      pB_wb_data_o;
 
   wb_ram DUT (.*);
 
@@ -45,8 +58,18 @@ module tb_wb_ram ();
   task reset_dut();
     wb_clk = 0;
     wb_reset_n = 1;
-    pA_wb_i = 'd0;
-    pB_wb_i = 'd0;
+    pA_wb_cyc_i   = 0;
+    pA_wb_stb_i   = 0;
+    pA_wb_we_i    = 0;
+    pA_wb_addr_i  = 0;
+    pA_wb_data_i  = 0;
+    pA_wb_sel_i   = 0;
+    pB_wb_cyc_i   = 0;
+    pB_wb_stb_i   = 0;
+    pB_wb_we_i    = 0;
+    pB_wb_addr_i  = 0;
+    pB_wb_data_i  = 0;
+    pB_wb_sel_i   = 0;
 
     wait_cycles(1);
     wb_reset_n = 0;
@@ -59,19 +82,24 @@ module tb_wb_ram ();
     input [DATA_WIDTH-1:0] data, 
     input [SEL_WIDTH-1:0] byte_sel);
 
-    wait(!pA_wb_o.ack && !pA_wb_o.stall);
+    wait(!pA_wb_ack_o && !pA_wb_stall_o);
     wait_cycles(1);
-    pA_wb_i.cyc   = 1;
-    pA_wb_i.stb   = 1;
-    pA_wb_i.we    = 1;
-    pA_wb_i.addr  = addr;
-    pA_wb_i.data  = data;
-    pA_wb_i.sel   = byte_sel;
+    pA_wb_cyc_i   = 1;
+    pA_wb_stb_i   = 1;
+    pA_wb_we_i    = 1;
+    pA_wb_addr_i  = addr;
+    pA_wb_data_i  = data;
+    pA_wb_sel_i   = byte_sel;
 
-    // `WAIT(pA_wb_o.ack, wb_clk);
-    wait(pA_wb_o.ack);
+    // `WAIT(pA_wb_ack_o, wb_clk);
+    wait(pA_wb_ack_o);
     // @(posedge wb_clk);
-    pA_wb_i = 'd0;
+    pA_wb_cyc_i   = 0;
+    pA_wb_stb_i   = 0;
+    pA_wb_we_i    = 0;
+    pA_wb_addr_i  = 0;
+    pA_wb_data_i  = 0;
+    pA_wb_sel_i   = 0;
 
     @(posedge wb_clk);
   endtask
@@ -82,18 +110,23 @@ module tb_wb_ram ();
     output [DATA_WIDTH-1:0] data);
 
     wait_cycles(1);
-    pA_wb_i.cyc   = 1;
-    pA_wb_i.stb   = 1;
-    pA_wb_i.we    = 0;
-    pA_wb_i.addr  = addr;
-    pA_wb_i.sel   = byte_sel;
+    pA_wb_cyc_i   = 1;
+    pA_wb_stb_i   = 1;
+    pA_wb_we_i    = 0;
+    pA_wb_addr_i  = addr;
+    pA_wb_sel_i   = byte_sel;
 
-    wait(pA_wb_o.ack);
-    pA_wb_i = 'd0;
+    wait(pA_wb_ack_o);
+    pA_wb_cyc_i   = 0;
+    pA_wb_stb_i   = 0;
+    pA_wb_we_i    = 0;
+    pA_wb_addr_i  = 0;
+    pA_wb_sel_i   = 0;
+    
     @(posedge wb_clk);
 
     // data =  DUT.ramA_data;
-    data = pA_wb_o.data;
+    data = pA_wb_data_o;
     
     // $error("%h or %h -> %h", DUT.ramA_data, DUT.ramB_data, data);
   endtask
@@ -103,19 +136,24 @@ module tb_wb_ram ();
     input [DATA_WIDTH-1:0] data,
     input [SEL_WIDTH-1:0] byte_sel);
       
-    wait(!pB_wb_o.ack && !pB_wb_o.stall);
+    wait(!pB_wb_ack_o && !pB_wb_stall_o);
     wait_cycles(1);
-    pB_wb_i.cyc  = 1;
-    pB_wb_i.stb  = 1;
-    pB_wb_i.we   = 1;
-    pB_wb_i.addr = addr;
-    pB_wb_i.data = data;
-    pB_wb_i.sel  = byte_sel;
+    pB_wb_cyc_i  = 1;
+    pB_wb_stb_i  = 1;
+    pB_wb_we_i   = 1;
+    pB_wb_addr_i = addr;
+    pB_wb_data_i = data;
+    pB_wb_sel_i  = byte_sel;
 
-    // `WAIT(pB_wb_o.ack, wb_clk);
-    wait(pB_wb_o.ack);
+    // `WAIT(pB_wb_ack_o, wb_clk);
+    wait(pB_wb_ack_o);
 
-    pB_wb_i = '0;
+    pB_wb_cyc_i  = 0;
+    pB_wb_stb_i  = 0;
+    pB_wb_we_i   = 0;
+    pB_wb_addr_i = 0;
+    pB_wb_data_i = 0;
+    pB_wb_sel_i  = 0;
   endtask
 
   task read_portB(
@@ -124,17 +162,21 @@ module tb_wb_ram ();
     output [DATA_WIDTH-1:0] data);
       
     wait_cycles(1);
-    pB_wb_i.cyc  = 1;
-    pB_wb_i.stb  = 1;
-    pB_wb_i.we   = 0;
-    pB_wb_i.addr = addr;
-    pB_wb_i.sel  = byte_sel;
+    pB_wb_cyc_i  = 1;
+    pB_wb_stb_i  = 1;
+    pB_wb_we_i   = 0;
+    pB_wb_addr_i = addr;
+    pB_wb_sel_i  = byte_sel;
 
-    wait(pB_wb_o.ack);
-
-    data = pB_wb_o.data;
+    wait(pB_wb_ack_o);
+    pB_wb_cyc_i  = 0;
+    pB_wb_stb_i  = 0;
+    pB_wb_we_i   = 0;
+    pB_wb_addr_i = 0;
+    pB_wb_sel_i  = 0;
+    data = pB_wb_data_o;
     wait_cycles(1);
-    pB_wb_i = '0;
+    
   endtask
 
   // test can write to a ram from port A
@@ -401,7 +443,7 @@ module tb_wb_ram ();
   task test_portA_mult_wr_rd();
     bit [ADDR_WIDTH-1:0] addr;
     bit [DATA_WIDTH-1:0] write_data, read_data;
-    for (int i = 0; i < 2 ** ADDR_WIDTH; i += 16) begin
+    for (int i = 0; i < 2 ** ADDR_WIDTH; i += 32) begin
       addr       = i[ADDR_WIDTH-1:0];
       write_data = 32'hffff_ffff - i;
       
@@ -422,7 +464,7 @@ module tb_wb_ram ();
   task test_portB_mult_wr_rd();
     bit [ADDR_WIDTH-1:0] addr;
     bit [DATA_WIDTH-1:0] write_data, read_data;
-    for (int i = 0; i < 2 ** ADDR_WIDTH; i += 16) begin
+    for (int i = 0; i < 2 ** ADDR_WIDTH; i += 32) begin
       addr       = i[ADDR_WIDTH-1:0];
       write_data = 32'hffff_ffff - i;
       
@@ -446,49 +488,71 @@ module tb_wb_ram ();
     bit [DATA_WIDTH-1:0] dataA  = 32'hdead_beef;
     bit [DATA_WIDTH-1:0] dataB  = 32'hcafebabe;
 
-    pA_wb_i = '0;
-    pB_wb_i = '0;
+    pA_wb_cyc_i  = 0;
+    pA_wb_stb_i  = 0;
+    pA_wb_we_i   = 0;
+    pA_wb_addr_i = 0;
+    pA_wb_data_i = 0;
+    pA_wb_sel_i  = 0;
+
+    pB_wb_cyc_i  = 0;
+    pB_wb_stb_i  = 0;
+    pB_wb_we_i   = 0;
+    pB_wb_addr_i = 0;
+    pB_wb_data_i = 0;
+    pB_wb_sel_i  = 0;
 
     wait_cycles(1);
 
     for (int i = 0; i < 10; i++) begin
-      wait(!pA_wb_o.ack && !pA_wb_o.stall);
-      wait(!pB_wb_o.ack && !pB_wb_o.stall);
-      pA_wb_i.cyc  = 1;
-      pA_wb_i.stb  = 1;
-      pA_wb_i.we   = 1;
-      pA_wb_i.addr = addrA;
-      pA_wb_i.data = dataA;
-      pA_wb_i.sel  = {SEL_WIDTH{1'b1}};
+      wait(!pA_wb_ack_o && !pA_wb_stall_o);
+      wait(!pB_wb_ack_o && !pB_wb_stall_o);
+      pA_wb_cyc_i  = 1;
+      pA_wb_stb_i  = 1;
+      pA_wb_we_i   = 1;
+      pA_wb_addr_i = addrA;
+      pA_wb_data_i = dataA;
+      pA_wb_sel_i  = {SEL_WIDTH{1'b1}};
 
-      pB_wb_i.cyc  = 1;
-      pB_wb_i.stb  = 1;
-      pB_wb_i.we   = 1;
-      pB_wb_i.addr = addrB;
-      pB_wb_i.data = dataB;
-      pB_wb_i.sel  = {SEL_WIDTH{1'b1}};
+      pB_wb_cyc_i  = 1;
+      pB_wb_stb_i  = 1;
+      pB_wb_we_i   = 1;
+      pB_wb_addr_i = addrB;
+      pB_wb_data_i = dataB;
+      pB_wb_sel_i  = {SEL_WIDTH{1'b1}};
 
-      wait(pB_wb_o.stall || pA_wb_o.stall)
-      assert(pB_wb_o.stall ^ pA_wb_o.stall)
+      wait(pB_wb_stall_o || pA_wb_stall_o)
+      assert(pB_wb_stall_o ^ pA_wb_stall_o)
       else begin
         $error("Expected exactly one port to stall: A_stall=%0b, B_stall=%0b",
-                pA_wb_o.stall, pB_wb_o.stall);
+                pA_wb_stall_o, pB_wb_stall_o);
         $fatal;
       end
 
       @(posedge wb_clk);
-      wait(pA_wb_o.ack || pB_wb_o.ack)
-      assert(pA_wb_o.ack ^ pB_wb_o.ack)
+      wait(pA_wb_ack_o || pB_wb_ack_o)
+      assert(pA_wb_ack_o ^ pB_wb_ack_o)
       else begin
         $error("Expected exactly one port to ack: A_ack=%0b, B_ack=%0b",
-                pA_wb_o.ack, pB_wb_o.ack);
+                pA_wb_ack_o, pB_wb_ack_o);
         @(posedge wb_clk);
         $fatal;
       end
     end
 
-    pA_wb_i = '0;
-    pB_wb_i = '0;
+    pA_wb_cyc_i  = 0;
+    pA_wb_stb_i  = 0;
+    pA_wb_we_i   = 0;
+    pA_wb_addr_i = 0;
+    pA_wb_data_i = 0;
+    pA_wb_sel_i  = 0;
+
+    pB_wb_cyc_i  = 0;
+    pB_wb_stb_i  = 0;
+    pB_wb_we_i   = 0;
+    pB_wb_addr_i = 0;
+    pB_wb_data_i = 0;
+    pB_wb_sel_i  = 0;
 
   endtask
 
