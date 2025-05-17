@@ -44,7 +44,7 @@ SIMULATOR := iverilog
 LINT_INCLUDES := -I$(PDKPATH) -I$(realpath gl)
 SIMULATOR_ARGS := -g2012 -DFUNCTIONAL -DUSE_POWER_PINS 
 SIMULATOR_BINARY := a.out
-SIMULATOR_SRCS = $(realpath gl)/* *.sv
+SIMULATOR_SRCS = $(realpath gl)/* *.sv  
 endif
 
 
@@ -165,12 +165,12 @@ itests:
 	@ICARUS=1 make tests
 
 gl_tests:
-	@mkdir -p gl
-	@cp runs/recent/final/pnl/* gl/
-	@cat scripts/gatelevel.vh gl/*.v > gl/temp
-	@mv -f gl/temp gl/*.v
-	@rm -f gl/temp
-	@GL=1 make tests
+	mkdir -p gl
+	cp runs/recent/final/pnl/* gl/
+	cat scripts/gatelevel.vh gl/*.v > gl/tmp
+	rm -f gl/*.v
+	mv -f gl/tmp gl/temp.v
+	GL=1 make tests
 
 .PHONY: $(TESTS)
 $(TESTS): 
@@ -221,7 +221,6 @@ clean:
 	rm -f `find tests -iname "a.out"`
 	rm -f `find tests -iname "*.log"`
 	rm -rf `find tests -iname "obj_dir"`
-	rm -rf runs
 
 .PHONY: VERILOG_SOURCES
 VERILOG_SOURCES: 

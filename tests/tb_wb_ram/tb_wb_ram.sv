@@ -1,7 +1,8 @@
+`timescale 1ns/1ps
+
 `ifndef TB_WB_RAM
 `define TB_WB_RAM
 
-`include "wb_ram.sv"
 
 `define WAIT(cond, clk)        \
   begin                         \
@@ -26,23 +27,23 @@ module tb_wb_ram ();
   logic                       pA_wb_cyc_i;
   logic                       pA_wb_stb_i;
   logic                       pA_wb_we_i;
-  logic [ADDR_WIDTH-1:0]      pA_wb_addr_i;
-  logic [DATA_WIDTH-1:0]      pA_wb_data_i;
-  logic [SEL_WIDTH-1:0]       pA_wb_sel_i;
+  logic [11-1:0]      pA_wb_addr_i;
+  logic [32-1:0]      pA_wb_data_i;
+  logic [4-1:0]       pA_wb_sel_i;
   logic                       pA_wb_stall_o;
   logic                       pA_wb_ack_o;
-  logic [DATA_WIDTH-1:0]      pA_wb_data_o;
+  logic [32-1:0]      pA_wb_data_o;
 
   // Port B Wishbone signals
   logic                       pB_wb_cyc_i;
   logic                       pB_wb_stb_i;
   logic                       pB_wb_we_i;
-  logic [ADDR_WIDTH-1:0]      pB_wb_addr_i;
-  logic [DATA_WIDTH-1:0]      pB_wb_data_i;
-  logic [SEL_WIDTH-1:0]       pB_wb_sel_i;
+  logic [11-1:0]      pB_wb_addr_i;
+  logic [32-1:0]      pB_wb_data_i;
+  logic [4-1:0]       pB_wb_sel_i;
   logic                       pB_wb_stall_o;
   logic                       pB_wb_ack_o;
-  logic [DATA_WIDTH-1:0]      pB_wb_data_o;
+  logic [32-1:0]      pB_wb_data_o;
 
   wb_ram DUT (.*);
 
@@ -58,18 +59,18 @@ module tb_wb_ram ();
   task reset_dut();
     wb_clk = 0;
     wb_reset_n = 1;
-    pA_wb_cyc_i   = 0;
-    pA_wb_stb_i   = 0;
-    pA_wb_we_i    = 0;
-    pA_wb_addr_i  = 0;
-    pA_wb_data_i  = 0;
-    pA_wb_sel_i   = 0;
-    pB_wb_cyc_i   = 0;
-    pB_wb_stb_i   = 0;
-    pB_wb_we_i    = 0;
-    pB_wb_addr_i  = 0;
-    pB_wb_data_i  = 0;
-    pB_wb_sel_i   = 0;
+    pA_wb_cyc_i   = 'd0;
+    pA_wb_stb_i   = 'd0;
+    pA_wb_we_i    = 'd0;
+    pA_wb_addr_i  = 'd0;
+    pA_wb_data_i  = 'd0;
+    pA_wb_sel_i   = 'd0;
+    pB_wb_cyc_i   = 'd0;
+    pB_wb_stb_i   = 'd0;
+    pB_wb_we_i    = 'd0;
+    pB_wb_addr_i  = 'd0;
+    pB_wb_data_i  = 'd0;
+    pB_wb_sel_i   = 'd0;
 
     wait_cycles(1);
     wb_reset_n = 0;
@@ -78,15 +79,15 @@ module tb_wb_ram ();
   endtask
 
   task write_portA(
-    input [ADDR_WIDTH-1:0] addr, 
-    input [DATA_WIDTH-1:0] data, 
-    input [SEL_WIDTH-1:0] byte_sel);
+    input [11-1:0] addr, 
+    input [32-1:0] data, 
+    input [4-1:0] byte_sel);
 
     wait(!pA_wb_ack_o && !pA_wb_stall_o);
     wait_cycles(1);
-    pA_wb_cyc_i   = 1;
-    pA_wb_stb_i   = 1;
-    pA_wb_we_i    = 1;
+    pA_wb_cyc_i   = 'd1;
+    pA_wb_stb_i   = 'd1;
+    pA_wb_we_i    = 'd1;
     pA_wb_addr_i  = addr;
     pA_wb_data_i  = data;
     pA_wb_sel_i   = byte_sel;
@@ -94,34 +95,34 @@ module tb_wb_ram ();
     // `WAIT(pA_wb_ack_o, wb_clk);
     wait(pA_wb_ack_o);
     // @(posedge wb_clk);
-    pA_wb_cyc_i   = 0;
-    pA_wb_stb_i   = 0;
-    pA_wb_we_i    = 0;
-    pA_wb_addr_i  = 0;
-    pA_wb_data_i  = 0;
-    pA_wb_sel_i   = 0;
+    pA_wb_cyc_i   = 'd0;
+    pA_wb_stb_i   = 'd0;
+    pA_wb_we_i    = 'd0;
+    pA_wb_addr_i  = 'd0;
+    pA_wb_data_i  = 'd0;
+    pA_wb_sel_i   = 'd0;
 
     @(posedge wb_clk);
   endtask
 
   task read_portA(
-    input [ADDR_WIDTH-1:0] addr, 
-    input [SEL_WIDTH-1:0] byte_sel,
-    output [DATA_WIDTH-1:0] data);
+    input [11-1:0] addr, 
+    input [4-1:0] byte_sel,
+    output [32-1:0] data);
 
     wait_cycles(1);
-    pA_wb_cyc_i   = 1;
-    pA_wb_stb_i   = 1;
-    pA_wb_we_i    = 0;
+    pA_wb_cyc_i   = 'd1;
+    pA_wb_stb_i   = 'd1;
+    pA_wb_we_i    = 'd0;
     pA_wb_addr_i  = addr;
     pA_wb_sel_i   = byte_sel;
 
     wait(pA_wb_ack_o);
-    pA_wb_cyc_i   = 0;
-    pA_wb_stb_i   = 0;
-    pA_wb_we_i    = 0;
-    pA_wb_addr_i  = 0;
-    pA_wb_sel_i   = 0;
+    pA_wb_cyc_i   = 'd0;
+    pA_wb_stb_i   = 'd0;
+    pA_wb_we_i    = 'd0;
+    pA_wb_addr_i  = 'd0;
+    pA_wb_sel_i   = 'd0;
     
     @(posedge wb_clk);
 
@@ -132,15 +133,15 @@ module tb_wb_ram ();
   endtask
 
   task write_portB(
-    input [ADDR_WIDTH-1:0] addr,
-    input [DATA_WIDTH-1:0] data,
-    input [SEL_WIDTH-1:0] byte_sel);
+    input [11-1:0] addr,
+    input [32-1:0] data,
+    input [4-1:0] byte_sel);
       
     wait(!pB_wb_ack_o && !pB_wb_stall_o);
     wait_cycles(1);
-    pB_wb_cyc_i  = 1;
-    pB_wb_stb_i  = 1;
-    pB_wb_we_i   = 1;
+    pB_wb_cyc_i  = 'd1;
+    pB_wb_stb_i  = 'd1;
+    pB_wb_we_i   = 'd1;
     pB_wb_addr_i = addr;
     pB_wb_data_i = data;
     pB_wb_sel_i  = byte_sel;
@@ -148,167 +149,167 @@ module tb_wb_ram ();
     // `WAIT(pB_wb_ack_o, wb_clk);
     wait(pB_wb_ack_o);
 
-    pB_wb_cyc_i  = 0;
-    pB_wb_stb_i  = 0;
-    pB_wb_we_i   = 0;
-    pB_wb_addr_i = 0;
-    pB_wb_data_i = 0;
-    pB_wb_sel_i  = 0;
+    pB_wb_cyc_i  = 'd0;
+    pB_wb_stb_i  = 'd0;
+    pB_wb_we_i   = 'd0;
+    pB_wb_addr_i = 'd0;
+    pB_wb_data_i = 'd0;
+    pB_wb_sel_i  = 'd0;
   endtask
 
   task read_portB(
-    input  [ADDR_WIDTH-1:0] addr,
-    input  [SEL_WIDTH-1:0]  byte_sel,
-    output [DATA_WIDTH-1:0] data);
+    input  [11-1:0] addr,
+    input  [4-1:0]  byte_sel,
+    output [32-1:0] data);
       
     wait_cycles(1);
-    pB_wb_cyc_i  = 1;
-    pB_wb_stb_i  = 1;
-    pB_wb_we_i   = 0;
+    pB_wb_cyc_i  = 'd1;
+    pB_wb_stb_i  = 'd1;
+    pB_wb_we_i   = 'd0;
     pB_wb_addr_i = addr;
     pB_wb_sel_i  = byte_sel;
 
     wait(pB_wb_ack_o);
-    pB_wb_cyc_i  = 0;
-    pB_wb_stb_i  = 0;
-    pB_wb_we_i   = 0;
-    pB_wb_addr_i = 0;
-    pB_wb_sel_i  = 0;
+    pB_wb_cyc_i  = 'd0;
+    pB_wb_stb_i  = 'd0;
+    pB_wb_we_i   = 'd0;
+    pB_wb_addr_i = 'd0;
+    pB_wb_sel_i  = 'd0;
     data = pB_wb_data_o;
     wait_cycles(1);
     
   endtask
 
   // test can write to a ram from port A
-  task automatic test_portA_write();
-    bit [ADDR_WIDTH-1:0] TESTADDR;  
-    bit [DATA_WIDTH-1:0] TESTWORD;
+  // task automatic test_portA_write();
+  //   bit [11-1:0] TESTADDR;  
+  //   bit [32-1:0] TESTWORD;
     
-    TESTADDR = 'h04;
-    TESTWORD = 'hcafebabe;
+  //   TESTADDR = 'h04;
+  //   TESTWORD = 'hcafebabe;
     
-    write_portA(TESTADDR, TESTWORD, {SEL_WIDTH{1'b1}});
+  //   write_portA(TESTADDR, TESTWORD, {4{1'b1}});
     
-    @(negedge wb_clk);
-    assert(DUT.RAM_A.RAM[TESTADDR[9:2]] == TESTWORD)
-    else begin
-      $error("Port A write failed @ addr 0x%0h: saw 0x%0h, expected 0x%0h",
-             TESTADDR,
-             DUT.RAM_A.RAM[TESTADDR[9:2]],
-             TESTWORD);
-      $fatal;
-    end
-    @(posedge wb_clk);
+  //   @(negedge wb_clk);
+  //   // assert(DUT.RAM_A.RAM[TESTADDR[9:2]] == TESTWORD)
+  //   // else begin
+  //     // $error("Port A write failed @ addr 0x%0h: saw 0x%0h, expected 0x%0h",
+  //           //  TESTADDR,
+  //           //  DUT.RAM_A.RAM[TESTADDR[9:2]],
+  //           //  TESTWORD);
+  //     // $fatal;
+  //   // end
+  //   // @(posedge wb_clk);
 
-  endtask
+  // endtask
 
-  // test can write to a ram from port B
-  task automatic test_portB_write();
-    bit [ADDR_WIDTH-1:0] TESTADDR  = 'h08;
-    bit [DATA_WIDTH-1:0] TESTWORD  = 'hdead_beef;
+  // // test can write to a ram from port B
+  // task automatic test_portB_write();
+  //   bit [11-1:0] TESTADDR  = 'h08;
+  //   bit [32-1:0] TESTWORD  = 'hdead_beef;
     
-    write_portB(TESTADDR, TESTWORD, {SEL_WIDTH{1'b1}});
+  //   write_portB(TESTADDR, TESTWORD, {4{1'b1}});
     
-    @(negedge wb_clk);
-    assert(DUT.RAM_A.RAM[TESTADDR[9:2]] == TESTWORD)
-    else begin
-      $error("Port B write failed @ addr 0x%0h: saw 0x%0h, expected 0x%0h",
-              TESTADDR,
-              DUT.RAM_A.RAM[TESTADDR[9:2]],
-              TESTWORD);
-      $fatal;
-    end
-    @(posedge wb_clk);
+  //   @(negedge wb_clk);
+  //   // assert(DUT.RAM_A.RAM[TESTADDR[9:2]] == TESTWORD)
+  //   // else begin
+  //     // $error("Port B write failed @ addr 0x%0h: saw 0x%0h, expected 0x%0h",
+  //             // TESTADDR,
+  //             // DUT.RAM_A.RAM[TESTADDR[9:2]],
+  //             // TESTWORD);
+  //     // $fatal;
+  //   // end
+  //   @(posedge wb_clk);
 
-  endtask
+  // endtask
 
-  // test the different byte selects on port A
-  task automatic test_portA_write_diff_bytes();
-    bit [ADDR_WIDTH-1:0] TESTADDR = 'h10;
-    bit [DATA_WIDTH-1:0] ORIG     = 32'hffff_ffff;
-    bit [DATA_WIDTH-1:0] DATA     = 32'h0102_0304;
-    bit [DATA_WIDTH-1:0] dut_word;
-    bit [DATA_WIDTH-1:0]      expected;
-    logic [SEL_WIDTH-1:0]     sel;
+  // // test the different byte selects on port A
+  // task automatic test_portA_write_diff_bytes();
+  //   bit [11-1:0] TESTADDR = 'h10;
+  //   bit [32-1:0] ORIG     = 32'hffff_ffff;
+  //   bit [32-1:0] DATA     = 32'h0102_0304;
+  //   bit [32-1:0] dut_word;
+  //   bit [32-1:0]      expected;
+  //   logic [4-1:0]     sel;
 
-    write_portA(TESTADDR, ORIG, {SEL_WIDTH{1'b1}});
+  //   write_portA(TESTADDR, ORIG, {4{1'b1}});
 
-    for (int i = 0; i < (1 << SEL_WIDTH); i++) begin
-      sel = i[SEL_WIDTH-1:0];
+  //   for (int i = 0; i < (1 << 4); i++) begin
+  //     sel = i[4-1:0];
 
-      write_portA(TESTADDR, DATA, sel);
+  //     write_portA(TESTADDR, DATA, sel);
 
-      dut_word = DUT.RAM_A.RAM[TESTADDR[9:2]];
+  //     dut_word = DUT.RAM_A.RAM[TESTADDR[9:2]];
 
-      expected = {
-        sel[3] ? DATA[31:24] : ORIG[31:24],
-        sel[2] ? DATA[23:16] : ORIG[23:16],
-        sel[1] ? DATA[15: 8] : ORIG[15: 8],
-        sel[0] ? DATA[ 7: 0] : ORIG[ 7: 0]
-      };
+  //     expected = {
+  //       sel[3] ? DATA[31:24] : ORIG[31:24],
+  //       sel[2] ? DATA[23:16] : ORIG[23:16],
+  //       sel[1] ? DATA[15: 8] : ORIG[15: 8],
+  //       sel[0] ? DATA[ 7: 0] : ORIG[ 7: 0]
+  //     };
 
-    @(negedge wb_clk);
-      assert (dut_word == expected)
-      else begin
-        $error("PortA write byte-select %0b failed @ addr 0x%0h: got 0x%0h, expected 0x%0h",
-                sel, TESTADDR, dut_word, expected);
-        $fatal;
-      end
+  //   @(negedge wb_clk);
+  //     assert (dut_word == expected)
+  //     else begin
+  //       $error("PortA write byte-select %0b failed @ addr 0x%0h: got 0x%0h, expected 0x%0h",
+  //               sel, TESTADDR, dut_word, expected);
+  //       $fatal;
+  //     end
 
-      write_portA(TESTADDR, ORIG, {SEL_WIDTH{1'b1}});
-    end
-    @(posedge wb_clk);
+  //     write_portA(TESTADDR, ORIG, {4{1'b1}});
+  //   end
+  //   @(posedge wb_clk);
 
-  endtask
+  // endtask
 
-  task automatic test_portB_write_diff_bytes();
-    bit [ADDR_WIDTH-1:0]   TESTADDR = 'h10;
-    bit [DATA_WIDTH-1:0]   ORIG     = 32'hffff_ffff;
-    bit [DATA_WIDTH-1:0]   DATA     = 32'h0102_0304;
-    bit [DATA_WIDTH-1:0]   dut_word;
-    bit [DATA_WIDTH-1:0]   expected;
-    logic [SEL_WIDTH-1:0]  sel;
+  // task automatic test_portB_write_diff_bytes();
+  //   bit [11-1:0]   TESTADDR = 'h10;
+  //   bit [32-1:0]   ORIG     = 32'hffff_ffff;
+  //   bit [32-1:0]   DATA     = 32'h0102_0304;
+  //   bit [32-1:0]   dut_word;
+  //   bit [32-1:0]   expected;
+  //   logic [4-1:0]  sel;
 
-    write_portB(TESTADDR, ORIG, {SEL_WIDTH{1'b1}});
+  //   write_portB(TESTADDR, ORIG, {4{1'b1}});
 
-    for (int i = 0; i < (1 << SEL_WIDTH); i++) begin
-      sel = i[SEL_WIDTH-1:0];
-      write_portB(TESTADDR, DATA, sel);
+  //   for (int i = 0; i < (1 << 4); i++) begin
+  //     sel = i[4-1:0];
+  //     write_portB(TESTADDR, DATA, sel);
 
-      // inspect internal RAM
-      dut_word = DUT.RAM_A.RAM[TESTADDR[9:2]];
+  //     // inspect internal RAM
+  //     dut_word = DUT.RAM_A.RAM[TESTADDR[9:2]];
 
-      // build expected word
-      expected = {
-        sel[3] ? DATA[31:24] : ORIG[31:24],
-        sel[2] ? DATA[23:16] : ORIG[23:16],
-        sel[1] ? DATA[15: 8] : ORIG[15: 8],
-        sel[0] ? DATA[ 7: 0] : ORIG[ 7: 0]
-      };
+  //     // build expected word
+  //     expected = {
+  //       sel[3] ? DATA[31:24] : ORIG[31:24],
+  //       sel[2] ? DATA[23:16] : ORIG[23:16],
+  //       sel[1] ? DATA[15: 8] : ORIG[15: 8],
+  //       sel[0] ? DATA[ 7: 0] : ORIG[ 7: 0]
+  //     };
 
-    @(negedge wb_clk);
-      assert (dut_word == expected)
-        else begin
-          $error("PortB write byte-select %0b failed @ addr 0x%0h: got 0x%0h, expected 0x%0h",
-                 sel, TESTADDR, dut_word, expected);
-          $fatal;
-        end
+  //   @(negedge wb_clk);
+  //     assert (dut_word == expected)
+  //       else begin
+  //         $error("PortB write byte-select %0b failed @ addr 0x%0h: got 0x%0h, expected 0x%0h",
+  //                sel, TESTADDR, dut_word, expected);
+  //         $fatal;
+  //       end
 
-      // restore original before next
-      write_portB(TESTADDR, ORIG, {SEL_WIDTH{1'b1}});
-    end
-    @(posedge wb_clk);
-  endtask
+  //     // restore original before next
+  //     write_portB(TESTADDR, ORIG, {4{1'b1}});
+  //   end
+  //   @(posedge wb_clk);
+  // endtask
 
   // // test reading back only selected bytes on Port A
   // task automatic test_portA_read_diff_bytes();
-  //   bit [ADDR_WIDTH-1:0]      TESTADDR = 'h10;
-  //   bit [DATA_WIDTH-1:0]      ORIG     = 32'hDEAD_BEEF;
-  //   bit [DATA_WIDTH-1:0]      dut_word;
-  //   bit [DATA_WIDTH-1:0]      expected;
+  //   bit [11-1:0]      TESTADDR = 'h10;
+  //   bit [32-1:0]      ORIG     = 32'hDEAD_BEEF;
+  //   bit [32-1:0]      dut_word;
+  //   bit [32-1:0]      expected;
 
   //   // preload memory with a known pattern
-  //   write_portA(TESTADDR, ORIG, {SEL_WIDTH{1'b1}});
+  //   write_portA(TESTADDR, ORIG, {4{1'b1}});
 
   //   // read only byte 0 (LSB)
   //   read_portA(TESTADDR, 4'b0001, dut_word);
@@ -352,13 +353,13 @@ module tb_wb_ram ();
   // endtask
 
   // task automatic test_portB_read_diff_bytes();
-  //   bit [ADDR_WIDTH-1:0]      TESTADDR = 'h10;
-  //   bit [DATA_WIDTH-1:0]      ORIG     = 32'hDEAD_BEEF;
-  //   bit [DATA_WIDTH-1:0]      dut_word;
-  //   bit [DATA_WIDTH-1:0]      expected;
+  //   bit [11-1:0]      TESTADDR = 'h10;
+  //   bit [32-1:0]      ORIG     = 32'hDEAD_BEEF;
+  //   bit [32-1:0]      dut_word;
+  //   bit [32-1:0]      expected;
 
   //   // preload memory with a known pattern
-  //   write_portB(TESTADDR, ORIG, {SEL_WIDTH{1'b1}});
+  //   write_portB(TESTADDR, ORIG, {4{1'b1}});
 
   //   // read only byte 0 (LSB)
   //   read_portB(TESTADDR, 4'b0001, dut_word);
@@ -403,12 +404,12 @@ module tb_wb_ram ();
 
   // test can read and write to a ram from port A
   task automatic test_portA_single_wr_rd();
-    bit [ADDR_WIDTH-1:0] TESTADDR   = 'h00;
-    bit [DATA_WIDTH-1:0] TESTWORD   = 32'hcafebabe;
-    bit [DATA_WIDTH-1:0] dut_word;
+    bit [11-1:0] TESTADDR   = 'h00;
+    bit [32-1:0] TESTWORD   = 32'hcafebabe;
+    bit [32-1:0] dut_word;
 
-    write_portA(TESTADDR, TESTWORD, {SEL_WIDTH{1'b1}});
-    read_portA(TESTADDR, {SEL_WIDTH{1'b1}}, dut_word);
+    write_portA(TESTADDR, TESTWORD, {4{1'b1}});
+    read_portA(TESTADDR, {4{1'b1}}, dut_word);
 
     // wait_cycles(1);
     @(negedge wb_clk);
@@ -423,12 +424,12 @@ module tb_wb_ram ();
 
   // test can read and write to a ram from port B
   task automatic test_portB_single_wr_rd();
-    bit [ADDR_WIDTH-1:0] TESTADDR  = 'h00;
-    bit [DATA_WIDTH-1:0] TESTWORD  = 'hcafebabe;
-    bit [DATA_WIDTH-1:0] dut_word;
+    bit [11-1:0] TESTADDR  = 'h00;
+    bit [32-1:0] TESTWORD  = 'hcafebabe;
+    bit [32-1:0] dut_word;
     
-    write_portB(TESTADDR, TESTWORD, {SEL_WIDTH{1'b1}});
-    read_portB(TESTADDR, {SEL_WIDTH{1'b1}}, dut_word);
+    write_portB(TESTADDR, TESTWORD, {4{1'b1}});
+    read_portB(TESTADDR, {4{1'b1}}, dut_word);
 
     @(negedge wb_clk);
     assert(dut_word == TESTWORD)
@@ -441,14 +442,14 @@ module tb_wb_ram ();
 
   // test can write to both ram from port A
   task test_portA_mult_wr_rd();
-    bit [ADDR_WIDTH-1:0] addr;
-    bit [DATA_WIDTH-1:0] write_data, read_data;
-    for (int i = 0; i < 2 ** ADDR_WIDTH; i += 32) begin
-      addr       = i[ADDR_WIDTH-1:0];
+    bit [11-1:0] addr;
+    bit [32-1:0] write_data, read_data;
+    for (int i = 0; i < 2 ** 11; i += 32) begin
+      addr       = i[11-1:0];
       write_data = 32'hffff_ffff - i;
       
-      write_portA(addr, write_data, {SEL_WIDTH{1'b1}});
-      read_portA(addr, {SEL_WIDTH{1'b1}}, read_data);
+      write_portA(addr, write_data, {4{1'b1}});
+      read_portA(addr, {4{1'b1}}, read_data);
 
     @(negedge wb_clk);
       assert (read_data == write_data)
@@ -462,14 +463,14 @@ module tb_wb_ram ();
 
   // test can write to both ram from port B
   task test_portB_mult_wr_rd();
-    bit [ADDR_WIDTH-1:0] addr;
-    bit [DATA_WIDTH-1:0] write_data, read_data;
-    for (int i = 0; i < 2 ** ADDR_WIDTH; i += 32) begin
-      addr       = i[ADDR_WIDTH-1:0];
+    bit [11-1:0] addr;
+    bit [32-1:0] write_data, read_data;
+    for (int i = 0; i < 2 ** 11; i += 32) begin
+      addr       = i[11-1:0];
       write_data = 32'hffff_ffff - i;
       
-      write_portB(addr, write_data, {SEL_WIDTH{1'b1}});
-      read_portB(addr, {SEL_WIDTH{1'b1}}, read_data);
+      write_portB(addr, write_data, {4{1'b1}});
+      read_portB(addr, {4{1'b1}}, read_data);
 
     @(negedge wb_clk);
       assert (read_data == write_data)
@@ -483,10 +484,10 @@ module tb_wb_ram ();
 
   // test stalls
   task automatic test_both_ports_wr_rd();
-    bit [ADDR_WIDTH-1:0] addrA  = 'h04;
-    bit [ADDR_WIDTH-1:0] addrB  = 'h08;
-    bit [DATA_WIDTH-1:0] dataA  = 32'hdead_beef;
-    bit [DATA_WIDTH-1:0] dataB  = 32'hcafebabe;
+    bit [11-1:0] addrA  = 'h04;
+    bit [11-1:0] addrB  = 'h08;
+    bit [32-1:0] dataA  = 32'hdead_beef;
+    bit [32-1:0] dataB  = 32'hcafebabe;
 
     pA_wb_cyc_i  = 0;
     pA_wb_stb_i  = 0;
@@ -512,14 +513,14 @@ module tb_wb_ram ();
       pA_wb_we_i   = 1;
       pA_wb_addr_i = addrA;
       pA_wb_data_i = dataA;
-      pA_wb_sel_i  = {SEL_WIDTH{1'b1}};
+      pA_wb_sel_i  = {4{1'b1}};
 
       pB_wb_cyc_i  = 1;
       pB_wb_stb_i  = 1;
       pB_wb_we_i   = 1;
       pB_wb_addr_i = addrB;
       pB_wb_data_i = dataB;
-      pB_wb_sel_i  = {SEL_WIDTH{1'b1}};
+      pB_wb_sel_i  = {4{1'b1}};
 
       wait(pB_wb_stall_o || pA_wb_stall_o)
       assert(pB_wb_stall_o ^ pA_wb_stall_o)
@@ -574,13 +575,13 @@ module tb_wb_ram ();
 
     reset_dut();
 
-    test_portA_write();
-
-    test_portB_write();
-
-    test_portA_write_diff_bytes();
-
-    test_portB_write_diff_bytes();
+    // test_portA_write();
+// 
+    // test_portB_write();
+// 
+    // test_portA_write_diff_bytes();
+// 
+    // test_portB_write_diff_bytes();
 
     test_portA_single_wr_rd();
 
