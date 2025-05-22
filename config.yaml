@@ -30,13 +30,13 @@ MACROS:
     instances:
       RAM_A:
         location:
-        - 150
+        - 100
         - 100
         orientation: N
       RAM_B:
         location:
-        - 150
-        - 900
+        - 100
+        - 700
         orientation: N
     gds:
       - dir::macros/dffram256x32/layout/gds/DFFRAM256x32.gds.gz

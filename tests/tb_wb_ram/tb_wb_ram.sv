@@ -568,6 +568,9 @@ module tb_wb_ram ();
     `ifdef VERILATOR
       $dumpfile("tb_verilator.vcd");
       $dumpvars(0, tb_wb_ram);
+    `elsif GL 
+      $dumpfile("tb_icarus_gl.vcd");
+      $dumpvars(2, tb_wb_ram);
     `else
       $dumpfile("tb_icarus.vcd");
       $dumpvars(0, tb_wb_ram);
@@ -575,13 +578,13 @@ module tb_wb_ram ();
 
     reset_dut();
 
-    // test_portA_write();
-// 
-    // test_portB_write();
-// 
-    // test_portA_write_diff_bytes();
-// 
-    // test_portB_write_diff_bytes();
+    test_portA_write();
+
+    test_portB_write();
+
+    test_portA_write_diff_bytes();
+
+    test_portB_write_diff_bytes();
 
     test_portA_single_wr_rd();
 
@@ -593,7 +596,7 @@ module tb_wb_ram ();
     
     test_both_ports_wr_rd();
 
-    #100;
+    wait_cycles(1);
 
     $finish();
   end
